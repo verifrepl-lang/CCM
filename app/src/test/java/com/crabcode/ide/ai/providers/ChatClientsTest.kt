@@ -110,9 +110,9 @@ class ChatClientsTest {
     fun `gemini tool call parsed`() = runTest {
         val sse = """
             data: {"candidates":[{"content":{"parts":[{"text":"Делаю"}]}}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2}}
-            
-            data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"list_dir","args":{"path":"."}}}]}}],"finishReason":"STOP"}]
-            
+
+            data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"list_dir","args":{"path":"."}}}]},"finishReason":"STOP"}]}
+
         """.trimIndent()
         server.enqueue(MockResponse().setBody(sse).setHeader("Content-Type", "text/event-stream"))
         val events = ChatClients(http)

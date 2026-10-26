@@ -84,8 +84,8 @@ object FileIcons {
     private fun assetPath(icon: String): String =
         if (icon.contains('.')) "img/$icon" else "img/$icon.svg"
 
-    fun forFolder(name: String): String? =
-        FOLDER_BY_NAME[name.lowercase()]?.let { "img/floder/folder-$it.svg" }
+    fun forFolder(name: String): String =
+        FOLDER_BY_NAME[name.lowercase()]?.let { "img/floder/folder-$it.svg" } ?: genericFolder()
 
     fun genericFolder(): String = "img/floder/folder.svg"
 }
