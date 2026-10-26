@@ -8,7 +8,7 @@ import org.junit.Test
 class FileIconsTest {
 
     @Test
-    fun `python icon for start.py`() {
+    fun `python icon for start_py`() {
         assertEquals("img/python.svg", FileIcons.forFile("start.py"))
     }
 
