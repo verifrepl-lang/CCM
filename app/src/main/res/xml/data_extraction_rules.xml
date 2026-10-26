@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <!-- Secrets (EncryptedSharedPreferences, Room DB with chats, projects) must
+         never leave the device through cloud backup. -->
+    <cloud-backup>
+        <exclude domain="sharedpref" path="crab_vault.xml" />
+        <exclude domain="file" path="users/" />
+        <exclude domain="file" path="linux/" />
+        <exclude domain="database" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="crab_vault.xml" />
+        <exclude domain="file" path="users/" />
+        <exclude domain="file" path="linux/" />
+        <exclude domain="database" path="." />
+    </device-transfer>
+</data-extraction-rules>

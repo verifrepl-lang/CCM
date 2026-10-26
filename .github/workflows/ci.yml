@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  NDK_VERSION: "27.0.12077973"
+  CMAKE_VERSION: "3.22.1"
+
+jobs:
+  build:
+    name: Unit tests + debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK components (NDK, CMake)
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "ndk;${NDK_VERSION}" "cmake;${CMAKE_VERSION}" > /dev/null
+          sdkmanager --list_installed | grep -E "ndk|cmake" || true
+
+      - name: Fetch PRoot binaries (functional debug APK)
+        run: |
+          chmod +x scripts/fetch-proot.sh
+          scripts/fetch-proot.sh aarch64 app/src/main/jniLibs
+          scripts/fetch-proot.sh x86_64 app/src/main/jniLibs
+          find app/src/main/jniLibs -type f | sort
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
+
+      - name: Unit tests
+        run: gradle :app:testDebugUnitTest --stacktrace
+
+      - name: Assemble debug APK
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: app/build/reports/tests/
+          if-no-files-found: ignore
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CrabCodeMobile-debug
+          path: app/build/outputs/apk/debug/*.apk

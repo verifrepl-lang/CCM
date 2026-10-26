@@ -1,0 +1,48 @@
+name: Environment rebuild
+
+# Manual rebuild of the Linux userspace without cutting an app release.
+on:
+  workflow_dispatch:
+    inputs:
+      versionSuffix:
+        description: "Суффикс версии rootfs (например hotfix1)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  rootfs:
+    name: Debian rootfs (${{ matrix.arch }})
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: aarch64
+            runs-on: ubuntu-24.04-arm
+          - arch: x86_64
+            runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build rootfs tarball
+        run: |
+          chmod +x scripts/build-rootfs.sh
+          mkdir -p dist
+          scripts/build-rootfs.sh "${{ matrix.arch }}" "dist/rootfs-debian-bookworm-${{ matrix.arch }}.tar.gz"
+
+      - name: Attach to latest release (env-manifest refresh)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
+          if [ -z "$TAG" ]; then echo "no release yet — artifact only"; exit 0; fi
+          for f in dist/rootfs-*.tar.gz; do gh release upload "$TAG" "$f" --clobber; done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rootfs-${{ matrix.arch }}
+          path: dist/rootfs-*.tar.gz
+          retention-days: 5

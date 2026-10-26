@@ -1,0 +1,21 @@
+# Android/Gradle
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signing (never commit)
+keystore.properties
+*.jks
+*.keystore
+
+# CI-generated native libs (fetched by scripts/fetch-proot.sh in CI)
+app/src/main/jniLibs/
+
+# OS
+.DS_Store
