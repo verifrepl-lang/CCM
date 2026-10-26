@@ -1,0 +1,12 @@
+PRoot — user-space implementation of chroot, mount --bind, and binfmt_misc.
+
+Upstream:    https://github.com/proot-me/proot
+License:     GPL-2.0-or-later (full text: GPL-2.0.txt in this directory)
+Binary from: Termux package repository (packages.termux.dev), package "proot",
+             version 5.1.107.101, built with Android NDK r30 for API 24+.
+             Termux packages: https://github.com/termux/termux-packages
+
+The binary is redistributed unmodified as an Android native library
+(libproot.so) and executed as a separate process by CrabCode Mobile.
+PRoot does NOT grant real superuser privileges; it emulates them in
+user space. See NOTICE.md in the repository root.

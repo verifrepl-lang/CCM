@@ -1,0 +1,12 @@
+libtalloc — hierarchical pool-based memory allocator (from Samba).
+
+Upstream:    https://talloc.samba.org / https://gitlab.com/samba-team/talloc
+License:     LGPL-3.0-or-later per upstream (LGPL-3.0.txt in this directory);
+             the Termux package's doc symlink references GPL-3.0.txt, which is
+             also included here for completeness.
+Binary from: Termux package repository (packages.termux.dev), package
+             "libtalloc", version 2.5.0, built with Android NDK r30 for
+             API 24+. Termux packages: https://github.com/termux/termux-packages
+
+The binary is redistributed unmodified as an Android native library
+(libtalloc.so) and loaded by PRoot at runtime.

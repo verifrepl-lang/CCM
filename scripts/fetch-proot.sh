@@ -7,6 +7,11 @@
 # from source with the NDK is possible but reproducible pinned debs from the
 # Termux repo are faster and field-proven by millions of devices.
 #
+# Exact .deb locations are resolved from the architecture-specific Debian
+# Packages index (dists/stable/main/binary-<arch>/Packages) — the pool layout
+# changed over time (t/talloc -> libt/libtalloc), so directory scraping is
+# fragile while the index is the authoritative mapping.
+#
 # Usage: fetch-proot.sh <aarch64|x86_64> [outdir]
 set -euo pipefail
 
@@ -17,36 +22,41 @@ TERMUX_REPO="https://packages.termux.dev/apt/termux-main"
 tempdir="$(mktemp -d)"
 trap 'rm -rf "$tempdir"' EXIT
 
-fetch_latest_deb() {
-  local dir_url="$1" prefix="$2"
-  local listing target
-  listing="$(curl -fsSL "$dir_url")"
-  # Directory index is HTML: pick the highest version of matching .deb files
-  target="$(echo "$listing" | grep -oE "${prefix}_[0-9][^\"<>]*_all\.deb" | sort -V | tail -1)"
-  if [ -z "$target" ]; then
-    target="$(echo "$listing" | grep -oE "${prefix}_[0-9][^\"<>]*\.deb" | sort -V | tail -1)"
-  fi
-  [ -n "$target" ] || { echo "ERROR: no $prefix package found in $dir_url" >&2; exit 1; }
-  echo "$target"
-}
-
 case "$ARCH" in
   aarch64) ABI="arm64-v8a" ;;
   x86_64)  ABI="x86_64" ;;
   *) echo "unsupported arch: $ARCH" >&2; exit 1 ;;
 esac
 
-PROOT_DIR="$TERMUX_REPO/pool/main/p/proot"
-TALLOC_DIR="$TERMUX_REPO/pool/main/t/talloc"
+INDEX_URL="$TERMUX_REPO/dists/stable/main/binary-$ARCH/Packages"
+echo "==> reading package index: $INDEX_URL"
+INDEX="$(curl -fsSL "$INDEX_URL")"
 
-PROOT_DEB="$(fetch_latest_deb "$PROOT_DIR" "proot")"
-TALLOC_DEB="$(fetch_latest_deb "$TALLOC_DIR" "libtalloc")"
+# Print "<version> <filename>" for the newest stanza of a package.
+deb_path() {
+  local pkg="$1"
+  echo "$INDEX" | awk -v pkg="$pkg" '
+    BEGIN { RS=""; FS="\n" }
+    {
+      ispkg = 0; ver = ""; file = ""
+      for (i = 1; i <= NF; i++) {
+        if ($i == "Package: " pkg) ispkg = 1
+        if ($i ~ /^Version: /)  ver  = substr($i, 10)
+        if ($i ~ /^Filename: /) file = substr($i, 11)
+      }
+      if (ispkg && file != "") print ver, file
+    }' | sort -V | tail -1 | cut -d' ' -f2
+}
 
-echo "==> proot:  $PROOT_DEB"
-echo "==> talloc: $TALLOC_DEB"
+PROOT_DEB_PATH="$(deb_path proot)"
+TALLOC_DEB_PATH="$(deb_path libtalloc)"
+[ -n "$PROOT_DEB_PATH" ]  || { echo "ERROR: proot not found in $INDEX_URL" >&2; exit 1; }
+[ -n "$TALLOC_DEB_PATH" ] || { echo "ERROR: libtalloc not found in $INDEX_URL" >&2; exit 1; }
+echo "==> proot:  $PROOT_DEB_PATH"
+echo "==> talloc: $TALLOC_DEB_PATH"
 
-curl -fsSL -o "$tempdir/proot.deb"   "$PROOT_DIR/$PROOT_DEB"
-curl -fsSL -o "$tempdir/talloc.deb"  "$TALLOC_DIR/$TALLOC_DEB"
+curl -fsSL -o "$tempdir/proot.deb"  "$TERMUX_REPO/$PROOT_DEB_PATH"
+curl -fsSL -o "$tempdir/talloc.deb" "$TERMUX_REPO/$TALLOC_DEB_PATH"
 
 dpkg-deb -x "$tempdir/proot.deb"  "$tempdir/proot-x"
 dpkg-deb -x "$tempdir/talloc.deb" "$tempdir/talloc-x"
@@ -62,12 +72,11 @@ mkdir -p "$DEST"
 cp "$PROOT_BIN"  "$DEST/libproot.so"
 cp "$TALLOC_LIB" "$DEST/libtalloc.so"
 
-# PRoot is GPL-2.0-or-later: keep the license next to the binaries.
-mkdir -p scripts/licenses
-cp "$tempdir/proot-x/data/data/com.termux/files/usr/share/doc/proot/copyright" \
-   "scripts/licenses/PROOT_COPYRIGHT" 2>/dev/null || true
-cp "$tempdir/talloc-x/data/data/com.termux/files/usr/share/doc/libtalloc*/copyright" \
-   "scripts/licenses/TALLOC_COPYRIGHT" 2>/dev/null || true
+# License notices for the bundled binaries are COMMITTED in scripts/licenses/
+# (PROOT_COPYRIGHT, TALLOC_COPYRIGHT, GPL-2.0.txt, GPL-3.0.txt, LGPL-3.0.txt).
+# Note: the usr/share/doc/<pkg>/copyright entries inside the Termux .debs are
+# dangling symlinks into the separate termux-licenses package, so copying them
+# at build time is unreliable — hence the committed copies.
 
 sha256sum "$DEST/libproot.so" "$DEST/libtalloc.so"
 echo "==> installed to $DEST"
