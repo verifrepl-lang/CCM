@@ -26,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -62,6 +63,7 @@ fun TerminalScreen(vm: CrabViewModel, expanded: Boolean) {
     val app = vm.getApplication<com.crabcode.ide.CrabApp>()
     val settings = remember { AppSettings(app) }
     val fontSp by settings.terminalFontSp.collectAsState(initial = 12f)
+    val scope = rememberCoroutineScope()
 
     var showAgentConsole by remember { mutableStateOf(false) }
 
@@ -104,10 +106,10 @@ fun TerminalScreen(vm: CrabViewModel, expanded: Boolean) {
             IconButton(onClick = { active?.let { context.terminal.close(it.id) } }) {
                 Icon(painterResource(R.drawable.ic_action_delete), "Закрыть сессию")
             }
-            IconButton(onClick = { settings.setTerminalFontSp(fontSp + 1f) }) {
+            IconButton(onClick = { scope.launch { settings.setTerminalFontSp(fontSp + 1f) } }) {
                 Icon(painterResource(R.drawable.ic_action_font_up), "Крупнее")
             }
-            IconButton(onClick = { settings.setTerminalFontSp(fontSp - 1f) }) {
+            IconButton(onClick = { scope.launch { settings.setTerminalFontSp(fontSp - 1f) } }) {
                 Icon(painterResource(R.drawable.ic_action_font_down), "Мельче")
             }
         }

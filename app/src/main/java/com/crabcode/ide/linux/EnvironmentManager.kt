@@ -130,7 +130,7 @@ class EnvironmentManager(
     suspend fun repair(keepProjects: Boolean = true) = withContext(Dispatchers.IO) {
         val projectsBackup = File(context.filesDir, "linux_repair_projects")
         log("Repair requested (keepProjects=$keepProjects)")
-        File(ProotPaths.rootfsDir(context)).deleteRecursively()
+        File(ProotPaths.rootfsDir(context).absolutePath).deleteRecursively()
         rootfsMarker.delete()
         _state.value = State.NotInstalled
         installIfNeeded(forceReinstall = true)

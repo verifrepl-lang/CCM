@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.crabcode.ide.core.update.ResumableDownloader
@@ -30,6 +31,7 @@ import com.crabcode.ide.linux.EnvironmentService
 import com.crabcode.ide.ui.CrabViewModel
 import java.text.DateFormat
 import java.util.Date
+import kotlinx.coroutines.launch
 
 /** Linux environment manager: install, status, disk, logs, repair. */
 @Composable
@@ -38,6 +40,7 @@ fun EnvScreen(vm: CrabViewModel) {
     if (context == null) { EmptyHintBox("Требуется вход"); return }
 
     val state by context.environment.state.collectAsState()
+    val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { context.environment.installIfNeeded() }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
@@ -94,7 +97,7 @@ fun EnvScreen(vm: CrabViewModel) {
         }
         TextButton(onClick = {
             // repair keeps projects untouched; only the rootfs is re-fetched
-            context.environment.installIfNeeded(forceReinstall = true)
+            scope.launch { context.environment.installIfNeeded(forceReinstall = true) }
         }) { Text("Восстановить окружение (проекты не затрагиваются)") }
 
         Card(

@@ -5,6 +5,7 @@ import android.os.ParcelFileDescriptor
 import android.system.Os
 import com.crabcode.ide.linux.NativePty
 import com.crabcode.ide.linux.ProotPaths
+import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import kotlinx.coroutines.channels.BufferOverflow
@@ -26,6 +27,7 @@ class TerminalSession(
 ) {
     val terminal = AnsiTerminal()
     private var masterFd: Int = -1
+    private var masterPfd: ParcelFileDescriptor? = null
     private var pid: Int = -1
     private var readerThread: Thread? = null
 
@@ -58,6 +60,8 @@ class TerminalSession(
         pid = res[0]
         masterFd = res[1]
         check(pid > 0) { "forkPty failed, errno=$masterFd" }
+        // Take ownership of the master fd so we can attach java.io streams to it.
+        masterPfd = ParcelFileDescriptor.adoptFd(masterFd)
 
         _state.value = State.RUNNING
         readerThread = Thread(::pumpLoop, "crab-term-$id").apply {
@@ -67,11 +71,11 @@ class TerminalSession(
     }
 
     private fun pumpLoop() {
-        val pfd = ParcelFileDescriptor.adoptFd(masterFd)
+        val pfd = masterPfd ?: return
         val input = FileInputStream(pfd.fileDescriptor)
         val buf = ByteArray(8192)
         while (_state.value == State.RUNNING) {
-            val n = runCatching { input.read(buf) }.getOrElse { break }
+            val n: Int = try { input.read(buf) } catch (_: Exception) { break }
             if (n < 0) break
             if (n == 0) continue
             val decoded = runCatching { String(buf, 0, n, Charsets.UTF_8) }.getOrElse { String(buf, 0, n, Charsets.ISO_8859_1) }
@@ -80,15 +84,17 @@ class TerminalSession(
         }
         exitCode = runCatching { NativePty.waitPidNoHang(pid) }.getOrNull()?.takeIf { it >= 0 }
         _state.value = State.EXITED
-        runCatching { pfd.close() }
+        runCatching { input.close() }
     }
 
     fun write(data: String) {
         if (_state.value != State.RUNNING) return
         val bytes = data.toByteArray(Charsets.UTF_8)
+        val pfd = masterPfd ?: return
         runCatching {
-            val pfd = ParcelFileDescriptor.dup(masterFd)
-            FileOutputStream(pfd.fileDescriptor).use { it.write(bytes) }
+            // Write through a dup so closing the stream never closes the master fd.
+            val dup = ParcelFileDescriptor.dup(pfd.fileDescriptor)
+            FileOutputStream(dup.fileDescriptor).use { it.write(bytes) }
         }
     }
 
@@ -115,7 +121,8 @@ class TerminalSession(
     fun kill() {
         if (_state.value != State.RUNNING) return
         runCatching { if (pid > 0) Os.kill(pid, 15) }
-        runCatching { if (masterFd >= 0) Os.close(masterFd) }
+        runCatching { masterPfd?.close() }
+        masterFd = -1
         _state.value = State.EXITED
     }
 

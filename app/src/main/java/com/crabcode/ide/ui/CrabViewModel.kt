@@ -163,7 +163,7 @@ class CrabViewModel(app: Application) : AndroidViewModel(app) {
                 AgentRuntime.AgentNotification.TASK_DONE -> settings.soundAgentDone
                 AgentRuntime.AgentNotification.NEEDS_APPROVAL -> settings.soundAgentApproval
                 AgentRuntime.AgentNotification.ERROR, AgentRuntime.AgentNotification.QUOTA -> settings.soundError
-            }
+            }.first()
             if (event == AgentRuntime.AgentNotification.NEEDS_APPROVAL) ensureSounds()
 
             val text = when (event) {

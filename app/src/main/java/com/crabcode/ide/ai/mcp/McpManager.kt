@@ -122,8 +122,8 @@ class McpManager(
     suspend fun disconnect(name: String) {
         sessions.remove(name)?.let { runCatching { it.close() } }
         val cfg = loadConfig()
-        cfg.servers.firstOrNull { it.name == name }?.let {
-            updateState(name) { McpServerState(it) }
+        cfg.servers.firstOrNull { it.name == name }?.let { serverCfg ->
+            updateState(name) { McpServerState(serverCfg) }
         }
     }
 

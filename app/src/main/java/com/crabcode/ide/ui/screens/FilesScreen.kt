@@ -199,21 +199,25 @@ private data class SearchHit(val file: File, val line: String?)
 private fun searchFiles(root: File, query: String): List<SearchHit> {
     val q = query.lowercase()
     val out = mutableListOf<SearchHit>()
-    root.walkTopDown().filter { it.isFile && it.length() < 500_000 }.forEach { f ->
-        if (f.name.lowercase().contains(q)) {
-            out += SearchHit(f, null)
-            if (out.size > 200) return out.take(200)
-        } else runCatching {
-            f.bufferedReader().useLines { lines ->
-                lines.forEach { line ->
-                    if (line.lowercase().contains(q)) {
-                        out += SearchHit(f, line.trim().take(120))
-                        if (out.size > 200) return
+    // takeWhile caps the walk as soon as the result budget is reached — no
+    // non-local returns out of the (non-inline) Sequence.forEach lambda.
+    root.walkTopDown()
+        .filter { it.isFile && it.length() < 500_000 }
+        .takeWhile { out.size <= 200 }
+        .forEach { f ->
+            if (f.name.lowercase().contains(q)) {
+                out += SearchHit(f, null)
+            } else runCatching {
+                f.bufferedReader().useLines { lines ->
+                    lines.forEach { line ->
+                        if (line.lowercase().contains(q)) {
+                            out += SearchHit(f, line.trim().take(120))
+                            if (out.size > 200) return@forEach
+                        }
                     }
                 }
             }
         }
-    }
     return out.take(200)
 }
 

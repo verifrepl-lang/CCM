@@ -114,8 +114,8 @@ class JwksVerifier(
     private fun buildRsaSubjectPublicKeyInfo(modulus: ByteArray, exponent: ByteArray): ByteArray {
         fun derLength(len: Int): ByteArray {
             if (len < 0x80) return byteArrayOf(len.toByte())
-            if (len <= 0xFF) return byteArrayOf(0x81, len.toByte())
-            return byteArrayOf(0x82, (len shr 8).toByte(), len.toByte())
+            if (len <= 0xFF) return byteArrayOf(0x81.toByte(), len.toByte())
+            return byteArrayOf(0x82.toByte(), (len shr 8).toByte(), len.toByte())
         }
         fun der(tag: Byte, value: ByteArray): ByteArray {
             val len = derLength(value.size)
@@ -125,7 +125,12 @@ class JwksVerifier(
             if (b.size > 1 && b[0] == 0.toByte()) b.copyOfRange(1, b.size) else b
 
         val pubKey = der(0x30, der(0x02, stripLeadingZero(modulus)) + der(0x02, stripLeadingZero(exponent)))
-        val algId = byteArrayOf(0x30, 0x0D, 0x06, 0x09, 0x2A, -0x76 - 0x20, 0x48, -0x72 - 0x24, 0x03, 0x01, 0x01, 0x01, 0x05, 0x00)
+        // SubjectPublicKeyInfo AlgorithmIdentifier: SEQUENCE { OID 1.2.840.113549.1.1.1, NULL }
+        // DER: 30 0D 06 09 2A 86 48 86 F7 0D 01 01 01 05 00
+        val algId = byteArrayOf(
+            0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86.toByte(), 0x48, 0x86.toByte(),
+            0xF7.toByte(), 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00
+        )
         return der(0x30, algId + der(0x03, byteArrayOf(0x00) + pubKey))
     }
 }

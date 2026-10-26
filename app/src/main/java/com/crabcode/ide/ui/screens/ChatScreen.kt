@@ -362,7 +362,7 @@ private fun PlanLines(json: String) {
                 .let { (it as? kotlinx.serialization.json.JsonObject)?.get("steps") }
             (arr as? kotlinx.serialization.json.JsonArray)?.map { el ->
                 val o = el as kotlinx.serialization.json.JsonObject
-                Triple(
+                Pair(
                     o["title"]?.let { (it as kotlinx.serialization.json.JsonPrimitive).content } ?: "",
                     o["status"]?.let { (it as kotlinx.serialization.json.JsonPrimitive).content } ?: "pending"
                 )

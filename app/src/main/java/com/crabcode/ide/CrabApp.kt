@@ -19,7 +19,7 @@ class CrabApp : Application(), ImageLoaderFactory {
     /** SVG icons of programming languages ship as original CrabCode assets. */
     override fun newImageLoader(): ImageLoader =
         ImageLoader.Builder(this)
-            .components { add(SvgDecoder(this@CrabApp)) }
+            .components { add(SvgDecoder()) }
             .crossfade(true)
             .build()
 

@@ -190,7 +190,7 @@ class AgentRuntime(
                     )
                 },
                 onCommandOutput = { terminal.appendAgentConsole(it) },
-                mcpTools = { mcp.toolRefs() },
+                mcpTools = { mcp.toolRefs().map { ToolRegistry.McpToolRef(it.server, it.tool, it.description) } },
                 mcpCall = { server, tool, args -> mcp.callTool(server, tool, args) }
             )
 
