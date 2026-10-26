@@ -80,6 +80,9 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Set up Android SDK (cmdline-tools)
+        uses: android-actions/setup-android@v3
+
       - name: Install Android SDK components (NDK, CMake)
         run: |
           yes | sdkmanager --licenses > /dev/null || true
