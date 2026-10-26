@@ -5,7 +5,7 @@
 -keepclassmembers class kotlinx.serialization.json.** {
     *** Companion;
 }
--keepclasses class com.crabcode.ide.**$$serializer {
+-keep class com.crabcode.ide.**$$serializer {
     *** INSTANCE;
     *** Companion;
 }

@@ -19,7 +19,9 @@ trap cleanup EXIT
 echo "==> preparing Debian bookworm container for $ARCH"
 docker pull --platform "linux/${ARCH}" debian:bookworm
 
-# Stage 1: install the toolchain users actually get out of the box.
+# Install the toolchain users get out of the box and strip the weight in ONE
+# docker run — the container stops when the script ends, and `docker export`
+# works on stopped containers (docker exec does not, hence the merge).
 docker run --platform "linux/${ARCH}" --name "$CONTAINER" debian:bookworm \
   bash -euc '
     export DEBIAN_FRONTEND=noninteractive
@@ -36,10 +38,7 @@ docker run --platform "linux/${ARCH}" --name "$CONTAINER" debian:bookworm \
     useradd -m -s /bin/bash crab 2>/dev/null || true
     echo "crab:x:1000:1000:Crab:/home/crab:/bin/bash" >> /etc/passwd || true
     mkdir -p /workspace
-  '
-
-# Stage 2: strip documentation/locale weight (~40% smaller tarball).
-docker exec "$CONTAINER" bash -euc '
+    # strip documentation/locale weight (~40% smaller tarball)
     rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/locale/* \
            /usr/share/groff/* /usr/share/info/* /usr/share/zoneinfo/* \
            /usr/share/common-licenses/* /var/log/*
