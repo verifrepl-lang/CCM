@@ -53,6 +53,28 @@ class GoogleAuth(
         account
     }
 
+    /**
+     * Offline fallback sign-in. Google Sign-In requires a configured OAuth Web
+     * client id; until that is shipped, users can enter with a per-device local
+     * account — the same isolated per-user space is created for it.
+     */
+    suspend fun signInLocal(): UserAccount = withContext(Dispatchers.IO) {
+        val deviceId = runCatching {
+            android.provider.Settings.Secure.getString(
+                context.contentResolver, android.provider.Settings.Secure.ANDROID_ID
+            )
+        }.getOrNull().takeUnless { it.isNullOrBlank() } ?: "device"
+        val account = UserAccount(
+            sub = "local:$deviceId",
+            email = "local@device",
+            name = "Локальный пользователь"
+        )
+        val file = accountFile(context)
+        file.parentFile!!.mkdirs()
+        file.writeText(json.encodeToString(account))
+        account
+    }
+
     suspend fun signOut() = withContext(Dispatchers.IO) {
         runCatching { CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest()) }
         accountFile(context).delete()

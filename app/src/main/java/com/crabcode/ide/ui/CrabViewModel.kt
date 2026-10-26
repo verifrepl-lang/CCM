@@ -79,8 +79,13 @@ class CrabViewModel(app: Application) : AndroidViewModel(app) {
     private var soundStopped = 0
 
     init {
-        // restore session after app restart
-        GoogleAuth.currentAccount(app)?.let { restore(it) }
+        // restore session after app restart — NEVER let a failed restore crash the app
+        runCatching { GoogleAuth.currentAccount(app)?.let { restore(it) } }.onFailure { e ->
+            _authError.value = "Не удалось восстановить сессию: ${e.message ?: e.javaClass.simpleName}. Войдите заново."
+            runCatching { GoogleAuth.accountFile(app).delete() }
+            ctx = null
+            _account.value = null
+        }
     }
 
     private val httpFallback: okhttp3.OkHttpClient by lazy {
@@ -96,9 +101,33 @@ class CrabViewModel(app: Application) : AndroidViewModel(app) {
             runCatching {
                 val auth = GoogleAuth(getApplication(), okHttpClient())
                 auth.signIn()
-            }.onSuccess { restore(it) }
+            }.onSuccess { account -> applyRestore(account) }
                 .onFailure { _authError.value = it.message ?: it.javaClass.simpleName }
             _busy.value = null
+        }
+    }
+
+    /** Offline entry — same isolated user space, no Google OAuth needed. */
+    fun signInLocal() {
+        viewModelScope.launch {
+            _busy.value = "Подготовка локального профиля…"
+            _authError.value = null
+            runCatching {
+                val auth = GoogleAuth(getApplication(), okHttpClient())
+                auth.signInLocal()
+            }.onSuccess { account -> applyRestore(account) }
+                .onFailure { _authError.value = it.message ?: it.javaClass.simpleName }
+            _busy.value = null
+        }
+    }
+
+    /** restore() builds the whole per-user context — a failure must not crash the app. */
+    private fun applyRestore(account: UserAccount) {
+        runCatching { restore(account) }.onFailure { e ->
+            _authError.value = "Сбой инициализации профиля: ${e.message ?: e.javaClass.simpleName}"
+            ctx?.shutdown()
+            ctx = null
+            _account.value = null
         }
     }
 

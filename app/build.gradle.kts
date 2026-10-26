@@ -27,8 +27,8 @@ android {
         // userspace. The app is distributed via GitHub Releases (sideload), not
         // Play Store, so Play's targetSdk policy does not apply. See README.
         targetSdk = 28
-        versionCode = 106
-        versionName = "1.0.6"
+        versionCode = 107
+        versionName = "1.0.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -62,8 +62,12 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // R8 temporarily disabled: the minified 1.0.6 build crashed on
+            // device at startup (proguard-android-optimize + partial keep rules).
+            // Re-enable ONLY with complete rules in proguard-rules.pro verified
+            // on a real device (check /sdcard/Android/data/<pkg>/files/crash_log.txt).
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // Installable APK without manual setup: debug key. Override via keystore.properties (see README).
             signingConfig = if (keystoreProps.isNotEmpty()) signingConfigs.getByName("release")
