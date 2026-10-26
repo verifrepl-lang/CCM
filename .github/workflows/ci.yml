@@ -25,14 +25,15 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK (cmdline-tools)
-        uses: android-actions/setup-android@v3
-
       - name: Install Android SDK components (NDK, CMake)
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "ndk;${NDK_VERSION}" "cmake;${CMAKE_VERSION}" > /dev/null
-          sdkmanager --list_installed | grep -E "ndk|cmake" || true
+          SDKM="$(ls /usr/local/lib/android/sdk/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)"
+          [ -n "$SDKM" ] || SDKM="$(command -v sdkmanager || true)"
+          [ -n "$SDKM" ] || { echo "sdkmanager not found" >&2; exit 1; }
+          echo "using sdkmanager: $SDKM"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "ndk;${NDK_VERSION}" "cmake;${CMAKE_VERSION}" > /dev/null
+          "$SDKM" --list_installed | grep -iE "ndk|cmake" || true
 
       - name: Fetch PRoot binaries (functional debug APK)
         run: |

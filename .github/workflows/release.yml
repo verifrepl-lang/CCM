@@ -80,22 +80,26 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK (cmdline-tools)
-        uses: android-actions/setup-android@v3
-
       - name: Install Android SDK components (NDK, CMake)
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "ndk;${NDK_VERSION}" "cmake;${CMAKE_VERSION}" > /dev/null
+          SDKM="$(ls /usr/local/lib/android/sdk/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)"
+          [ -n "$SDKM" ] || SDKM="$(command -v sdkmanager || true)"
+          [ -n "$SDKM" ] || { echo "sdkmanager not found" >&2; exit 1; }
+          echo "using sdkmanager: $SDKM"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "ndk;${NDK_VERSION}" "cmake;${CMAKE_VERSION}" > /dev/null
 
       - name: Restore signing keystore (optional, from secrets)
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "KEYSTORE_BASE64 secret not set — release APK will be signed with the debug key"
+            exit 0
+          fi
           echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
           cat > keystore.properties <<EOF
           storeFile=$PWD/release.keystore
