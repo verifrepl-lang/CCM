@@ -89,6 +89,15 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    lint {
+        // targetSdk 28 is a deliberate technical decision (same as Termux):
+        // apps targeting API 29+ are forbidden by SELinux from executing
+        // binaries out of their writable data directory, which breaks the
+        // PRoot Linux userspace. The app is distributed via GitHub Releases
+        // (sideload), not Google Play, so Play's targetSdk policy is moot.
+        disable += "ExpiredTargetSdkVersion"
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
